@@ -970,6 +970,13 @@ local function addDays(y, m, d, n)
   return lunar.fromJulianDay(lunar.toJulianDay(y, m, d) + n)
 end
 
+-- 回到当月/今日
+local function goToday()
+  view.mode = "month"
+  view.y, view.m, view.d = todayY, todayM, todayD
+  render()
+end
+
 function init()
   todayY = tonumber(noctalia.formatTime("%Y", nil, "") or "0")
   todayM = tonumber(noctalia.formatTime("%m", nil, "") or "0")
@@ -1027,19 +1034,12 @@ local function dayCell(y, m, d, isCurrentMonth, l)
   end
 
   local onClick = function() openDetail(y, m, d) end
-  local inner
-  if isToday then
-    inner = ui.column({ fill = "primary/0.18", radius = 6, padding = 2, align = "center", onClick = onClick }, {
-      ui.label({ text = tostring(d), color = mainColor, fontWeight = "bold", fontSize = 13 }),
-      ui.label({ text = subText, color = subColor, fontSize = 9 }),
-    })
-  else
-    inner = ui.column({ padding = 2, align = "center", onClick = onClick }, {
-      ui.label({ text = tostring(d), color = mainColor, fontWeight = "bold", fontSize = 13 }),
-      ui.label({ text = subText, color = subColor, fontSize = 9 }),
-    })
-  end
-  return inner
+  -- 等宽：expand 让 7 列均分父容器宽度保证列对齐（row 内自动拉伸等高）
+  local fill = isToday and "primary/0.18" or nil
+  return ui.column({ expand = true, padding = 2, align = "center", fill = fill, onClick = onClick }, {
+    ui.label({ text = tostring(d), color = mainColor, fontWeight = "bold", fontSize = 13 }),
+    ui.label({ text = subText, color = subColor, fontSize = 9, maxLines = 1 }),
+  })
 end
 
 local function renderMonth()
@@ -1048,16 +1048,17 @@ local function renderMonth()
   local firstDow, daysInMonth = monthGridInfo(y, m)
 
   local rows = {}
+  -- 周表头：expand 等分宽度，与下方日期行同 gap，保证一~日与各列对齐
   local weekHeader = {
-    ui.label({ text = "一", color = "on_surface_variant", fontSize = 11 }),
-    ui.label({ text = "二", color = "on_surface_variant", fontSize = 11 }),
-    ui.label({ text = "三", color = "on_surface_variant", fontSize = 11 }),
-    ui.label({ text = "四", color = "on_surface_variant", fontSize = 11 }),
-    ui.label({ text = "五", color = "on_surface_variant", fontSize = 11 }),
-    ui.label({ text = "六", color = "secondary", fontSize = 11 }),
-    ui.label({ text = "日", color = "secondary", fontSize = 11 }),
+    ui.label({ text = "一", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "二", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "三", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "四", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "五", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "六", color = "secondary", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "日", color = "secondary", fontSize = 11, expand = true, textAlign = "center" }),
   }
-  table.insert(rows, ui.row({ gap = 2 }, weekHeader))
+  table.insert(rows, ui.row({ gap = 6 }, weekHeader))
 
   local cellY, cellM, cellD = y, m, 1
   local prefix = firstDow
@@ -1073,7 +1074,7 @@ local function renderMonth()
     if cellD > 0 and isCurrent then
       table.insert(cells, dayCell(cellY, cellM, cellD, true, l0))
     else
-      table.insert(cells, ui.box({ height = 24 }))
+      table.insert(cells, ui.box({ expand = true }))
     end
     cellY, cellM, cellD = lunar.fromJulianDay(lunar.toJulianDay(cellY, cellM, cellD) + 1)
     l0 = lunar.fromLunarAdvance(l0)
@@ -1090,15 +1091,22 @@ local function renderMonth()
   local lNow = lunar.fromSolar(todayY, todayM, todayD)
 
   panel.render(ui.column({ gap = 8, padding = 10 }, {
-    ui.row({ align = "center", gap = 8 }, {
-      ui.button({ glyph = "chevron-left", variant = "ghost", onClick = function()
+    -- 顶栏：<上一月  上一年  年月标题  下一年  下一月>
+    ui.row({ align = "center", justify = "space_between" }, {
+      ui.button({ glyph = "chevron-left", tooltip = "上一月", variant = "ghost", onClick = function()
         view.y, view.m = prevMonth(view.y, view.m)
         render()
       end }),
-      ui.spacer(),
-      ui.label({ text = titleText, fontWeight = "bold", fontSize = 16, expand = true }),
-      ui.spacer(),
-      ui.button({ glyph = "chevron-right", variant = "ghost", onClick = function()
+      ui.button({ glyph = "player-skip-back-filled", tooltip = "上一年", variant = "ghost", onClick = function()
+        view.y = view.y - 1
+        render()
+      end }),
+      ui.label({ text = titleText, fontWeight = "bold", fontSize = 16, expand = true, textAlign = "center" }),
+      ui.button({ glyph = "player-skip-forward-filled", tooltip = "下一年", variant = "ghost", onClick = function()
+        view.y = view.y + 1
+        render()
+      end }),
+      ui.button({ glyph = "chevron-right", tooltip = "下一月", variant = "ghost", onClick = function()
         view.y, view.m = nextMonth(view.y, view.m)
         render()
       end }),
@@ -1108,6 +1116,7 @@ local function renderMonth()
       color = "secondary",
       fontSize = 11,
     }),
+    ui.button({ text = "回到今日", variant = "text", size = "small", onClick = goToday }),
     rows[1],
     (function()
       local grid = {}
@@ -1155,6 +1164,9 @@ end
 
 function onOpen()
   init()
+  -- 每次打开面板都回到当前月，避免停留在之前翻到的远月份
+  view.mode = "month"
+  view.y, view.m, view.d = todayY, todayM, todayD
   render()
 end
 

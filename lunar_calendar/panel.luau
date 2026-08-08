@@ -197,6 +197,44 @@ function M.fromSolar(y, m, d)
   return result
 end
 
+-- 农历日期前进一天（纯 O(1) 递增，供月历逐格推进用）
+-- 入参/返回值: ly,lm,ld,lisleap -> 下一天的 (ly,lm,ld,lisleap)
+local function lunarAdvance(ly, lm, ld, isLeap)
+  local leapM = M.leapMonth(ly)
+  local days = M.monthDays(ly, lm)
+  local leapDays_ = (leapM == lm) and M.leapDays(ly) or 0
+  if isLeap then
+    if ld < leapDays_ then
+      return ly, lm, ld + 1, true
+    end
+    if lm == 12 then
+      return ly + 1, 1, 1, false
+    end
+    return ly, lm + 1, 1, false
+  else
+    if ld < days then
+      return ly, lm, ld + 1, false
+    end
+    if leapM == lm and leapDays_ > 0 then
+      return ly, lm, 1, true
+    end
+    if lm == 12 then
+      return ly + 1, 1, 1, false
+    end
+    return ly, lm + 1, 1, false
+  end
+end
+
+-- 接收农历表，返回前进一天后的农历表（供月历逐格推进复用）
+function M.fromLunarAdvance(l)
+  local ny, nm, nd, nlp = lunarAdvance(l.year, l.month, l.day, l.isLeap)
+  return {
+    year = ny, month = nm, day = nd, isLeap = nlp,
+    monthStr = (nlp and "闰" or "") .. MonthCN2[nm],
+    dayStr = DayCN[nd],
+  }
+end
+
 -- 判断一个阳历日期是否为节气当天，返回节气名或 nil（2026 常用节气近似）
 -- 节气时刻精确到日，这里用简化版（权威库读不到，做常用中文节气）
 local SolarTerm = {
@@ -231,6 +269,11 @@ function M.getHoliday(solarY, solarM, solarD)
   end
   -- 农历节日（需先转农历；注意除夕跨年判断）
   local l = M.fromSolar(solarY, solarM, solarD)
+  return M.getHolidayL(l)
+end
+
+-- 给定已算好的农历 l，直接返回节日名（避免对月历每格重复调用 fromSolar）
+function M.getHolidayL(l)
   for _, h in ipairs(M.lunarHolidays) do
     if h[1] == l.month and h[2] == l.day then
       return "lunar", h[3]
@@ -953,11 +996,11 @@ end
 
 -- ============ 月历视图 ============
 
-local function dayCell(y, m, d, isCurrentMonth)
-  local l = lunar.fromSolar(y, m, d)
+-- l 为调用方已算好的该公历日农历表（不得在此内部再调 fromSolar，避免整月渲染超 CPU 预算）
+local function dayCell(y, m, d, isCurrentMonth, l)
   local isToday = (y == todayY and m == todayM and d == todayD)
   local isWeekend = (weekday1Monday(y, m, d) >= 5)
-  local htype, hname = lunar.getHoliday(y, m, d)
+  local htype, hname = lunar.getHolidayL(l)
 
   local sub = l.dayStr
   if l.day == 1 then
@@ -1021,16 +1064,19 @@ local function renderMonth()
   if prefix > 0 then
     cellY, cellM, cellD = lunar.fromJulianDay(lunar.toJulianDay(y, m, 1) - prefix)
   end
+  -- 首格农历基准只算一次，后续用 lunarAdvance 逐格 O(1) 推进
+  local l0 = lunar.fromSolar(cellY, cellM, cellD)
 
   local cells = {}
   for i = 1, 42 do
     local isCurrent = (cellY == y and cellM == m)
     if cellD > 0 and isCurrent then
-      table.insert(cells, dayCell(cellY, cellM, cellD, true))
+      table.insert(cells, dayCell(cellY, cellM, cellD, true, l0))
     else
       table.insert(cells, ui.box({ height = 24 }))
     end
     cellY, cellM, cellD = lunar.fromJulianDay(lunar.toJulianDay(cellY, cellM, cellD) + 1)
+    l0 = lunar.fromLunarAdvance(l0)
   end
 
   for row = 0, 5 do

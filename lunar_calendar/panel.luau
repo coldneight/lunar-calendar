@@ -1188,6 +1188,14 @@ local function chip(text, color, fill)
   })
 end
 
+-- 自适应胶囊：flexGrow 均分列宽，label maxLines=0 允许英文长文本在列内换行
+-- （解决英文干支/翻译等超底板；中文短串不触发换行仍单行居中）
+local function chipCol(text, color, fill)
+  return ui.column({ padding = 4, radius = 6, fill = fill or "surface_variant/0.2", flexGrow = 1 }, {
+    ui.label({ text = text, fontSize = 11, color = color or "on_surface", maxLines = 0, textAlign = "center" }),
+  })
+end
+
 local M = {}
 
 -- 返回详情内容数组（panel 负责外层容器 + 导航行）
@@ -1244,17 +1252,17 @@ function M.view(d)
     banner = ui.spacer()
   end
 
-  -- 信息网格：建除 / 值神 / 冲煞 / 干支
+  -- 信息网格：建除 / 值神 / 冲煞 / 干支（用 chipCol 均分列宽，英文长文本自动换行）
   local infoRows = ui.column({ gap = 4 }, {
-    ui.row({ gap = 6, align = "center", justify = "space_between" }, {
-      chip(i18n.struct("建除") .. " · " .. i18n.jianChu(d.jianChu)),
-      chip(i18n.struct("值神") .. " · " .. i18n.tianShen(d.tianShen)),
-      chip(i18n.struct("冲") .. i18n.animal(d.chong) .. "  " .. i18n.struct("煞") .. i18n.dir(d.sha)),
+    ui.row({ gap = 4, align = "center" }, {
+      chipCol(i18n.struct("建除") .. " · " .. i18n.jianChu(d.jianChu)),
+      chipCol(i18n.struct("值神") .. " · " .. i18n.tianShen(d.tianShen)),
+      chipCol(i18n.struct("冲") .. i18n.animal(d.chong) .. "  " .. i18n.struct("煞") .. i18n.dir(d.sha)),
     }),
-    ui.row({ gap = 6, align = "center", justify = "space_between" }, {
-      chip(i18n.struct("日") .. " · " .. i18n.romanizeGanzhi(d.dayGanZhi)),
-      chip(i18n.struct("月") .. " · " .. i18n.romanizeGanzhi(d.monthGanZhi)),
-      chip(i18n.struct("年") .. " · " .. i18n.romanizeGanzhi(d.yearGanZhi) .. i18n.animal(d.yearAnimal)),
+    ui.row({ gap = 4, align = "center" }, {
+      chipCol(i18n.struct("日") .. " · " .. i18n.romanizeGanzhi(d.dayGanZhi)),
+      chipCol(i18n.struct("月") .. " · " .. i18n.romanizeGanzhi(d.monthGanZhi)),
+      chipCol(i18n.struct("年") .. " · " .. i18n.romanizeGanzhi(d.yearGanZhi) .. i18n.animal(d.yearAnimal)),
     }),
   })
 

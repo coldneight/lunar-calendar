@@ -633,6 +633,49 @@ local function barFormat()
   return v
 end
 
+-- 把混合中西文的文本按字符集拆段（方案A），每段内部是统一字符集，
+-- 这样每个 label 内只有一种字体的基线，避免中西文混排时的高低差。
+-- 段间空格归入前一段，保证换段处不留多余空位（label 间用容器 gap 补距离）。
+local function utf8CharLen(b)
+  if b == nil then return 1 end
+  if b < 0x80 then return 1 end
+  if b < 0xE0 then return 2 end
+  if b < 0xF0 then return 3 end
+  return 4
+end
+local function splitByCharset(s)
+  local segs = {}
+  local curCjk = nil
+  local start = 1
+  local i = 1
+  local n = #s
+  while i <= n do
+    local b = s:byte(i)
+    local clen = utf8CharLen(b)
+    local isCjk = b >= 0x80
+    if b == 0x20 then
+      -- 空格：归属当前段（若当前段存在），否则归入后续首个段
+      if curCjk == nil then
+        curCjk = false
+      end
+      i = i + clen
+    else
+      if curCjk == nil then
+        curCjk = isCjk
+      elseif isCjk ~= curCjk then
+        table.insert(segs, s:sub(start, i - 1))
+        curCjk = isCjk
+        start = i
+      end
+      i = i + clen
+    end
+  end
+  if curCjk ~= nil and start <= n then
+    table.insert(segs, s:sub(start, n))
+  end
+  return segs
+end
+
 local function render()
   if not todayLunar then
     computeToday()
@@ -667,8 +710,11 @@ local function render()
     text = today.y .. " " .. ganZhiTxt .. " " .. shengXiaoTxt .. i18n.struct("年") .. " " .. monthTxt .. " " .. dayTxt
   end
 
+  -- 方案A：把混合中西文的文本按字符集拆成多个 label，避免单 label 内中西文基线高低差。
   if text ~= "" and not barWidget.isVertical() then
-    table.insert(children, ui.label({ text = text, fontWeight = "bold" }))
+    for _, seg in ipairs(splitByCharset(text)) do
+      table.insert(children, ui.label({ text = seg, fontWeight = "bold" }))
+    end
   end
 
   -- tooltip

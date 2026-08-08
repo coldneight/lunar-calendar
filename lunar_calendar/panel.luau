@@ -353,7 +353,7 @@ function M.dayNian(s)
   local ganzhi = string.sub(yearPart, 1, -2) -- 去掉"年"
   local zhMonth, zhDay = string.match(rest, "^(.-)(%S+)$")
   if not zhMonth then return s end
-  local romanized = M.romanizeGanzhi(ganzhi) .. " Year"
+  local romanized = M.romanizeGanzhi(ganzhi) .. "-year"
   local mth = M.lunarMonth(zhMonth, false)
   local day = M.lunarDay(zhDay)
   return romanized .. ", " .. mth .. " " .. day

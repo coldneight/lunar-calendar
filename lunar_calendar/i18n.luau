@@ -299,6 +299,17 @@ function M.lunarDay(dayStr)
 end
 
 -- 农历月（英文：6th lunar month；闰月加 leap）
+-- 标准英文序数后缀：1st / 2nd / 3rd / 4th …（num 为字符串数字，如 "1".."12"）
+local function ordinalSuffix(num)
+  local n = tonumber(num) or 0
+  local r = n % 10
+  local h = n % 100
+  if r == 1 and h ~= 11 then return "st" end
+  if r == 2 and h ~= 12 then return "nd" end
+  if r == 3 and h ~= 13 then return "rd" end
+  return "th"
+end
+
 function M.lunarMonth(monthStr, isLeap)
   if not isEn() then return monthStr .. (isLeap and "（闰）" or "") end
   if not monthStr then return monthStr end
@@ -307,7 +318,7 @@ function M.lunarMonth(monthStr, isLeap)
   local num = MONTH_NUM[string.sub(zh, 1, cl)]
   local pre = (isLeap and "Leap " or "")
   if num then
-    return pre .. num .. "th lunar month"
+    return pre .. num .. ordinalSuffix(num) .. " lunar month"
   end
   return monthStr
 end

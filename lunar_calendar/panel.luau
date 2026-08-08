@@ -1034,11 +1034,11 @@ local function dayCell(y, m, d, isCurrentMonth, l)
   end
 
   local onClick = function() openDetail(y, m, d) end
-  -- 等宽：expand 让 7 列均分父容器宽度保证列对齐（row 内自动拉伸等高）
+  -- 等宽：flexGrow 让 7 列均分父容器宽度保证列对齐；数字右对齐贴近右侧，符合日历习惯
   local fill = isToday and "primary/0.18" or nil
-  return ui.column({ expand = true, padding = 2, align = "center", fill = fill, onClick = onClick }, {
-    ui.label({ text = tostring(d), color = mainColor, fontWeight = "bold", fontSize = 13 }),
-    ui.label({ text = subText, color = subColor, fontSize = 9, maxLines = 1 }),
+  return ui.column({ flexGrow = 1, padding = 2, align = "center", fill = fill, onClick = onClick }, {
+    ui.label({ text = tostring(d), color = mainColor, fontWeight = "bold", fontSize = 13, textAlign = "end" }),
+    ui.label({ text = subText, color = subColor, fontSize = 9, maxLines = 1, textAlign = "end" }),
   })
 end
 
@@ -1048,15 +1048,15 @@ local function renderMonth()
   local firstDow, daysInMonth = monthGridInfo(y, m)
 
   local rows = {}
-  -- 周表头：expand 等分宽度，与下方日期行同 gap，保证一~日与各列对齐
+  -- 周表头：flexGrow 均分宽度，与下方日期行同 gap，保证一~日与各列对齐
   local weekHeader = {
-    ui.label({ text = "一", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "二", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "三", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "四", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "五", color = "on_surface_variant", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "六", color = "secondary", fontSize = 11, expand = true, textAlign = "center" }),
-    ui.label({ text = "日", color = "secondary", fontSize = 11, expand = true, textAlign = "center" }),
+    ui.label({ text = "一", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "二", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "三", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "四", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "五", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "六", color = "secondary", fontSize = 11, flexGrow = 1, textAlign = "center" }),
+    ui.label({ text = "日", color = "secondary", fontSize = 11, flexGrow = 1, textAlign = "center" }),
   }
   table.insert(rows, ui.row({ gap = 6 }, weekHeader))
 
@@ -1074,7 +1074,7 @@ local function renderMonth()
     if cellD > 0 and isCurrent then
       table.insert(cells, dayCell(cellY, cellM, cellD, true, l0))
     else
-      table.insert(cells, ui.box({ expand = true }))
+      table.insert(cells, ui.box({ flexGrow = 1 }))
     end
     cellY, cellM, cellD = lunar.fromJulianDay(lunar.toJulianDay(cellY, cellM, cellD) + 1)
     l0 = lunar.fromLunarAdvance(l0)
@@ -1101,7 +1101,7 @@ local function renderMonth()
         view.y = view.y - 1
         render()
       end }),
-      ui.label({ text = titleText, fontWeight = "bold", fontSize = 16, expand = true, textAlign = "center" }),
+      ui.label({ text = titleText, fontWeight = "bold", fontSize = 16, flexGrow = 1, textAlign = "center" }),
       ui.button({ glyph = "player-skip-forward-filled", tooltip = "下一年", variant = "ghost", onClick = function()
         view.y = view.y + 1
         render()

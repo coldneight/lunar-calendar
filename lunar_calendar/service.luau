@@ -78,7 +78,7 @@ end
 -- 闰月天数
 function M.leapDays(y)
   local lm = M.leapMonth(y)
-  if lm ~= 0 and (lunarInfo[y - 1899] & 0x10000) ~= 0 then
+  if lm ~= 0 and math.floor(lunarInfo[y - 1899] / 0x10000) % 2 == 1 then
     return 30
   elseif lm ~= 0 then
     return 29
@@ -88,8 +88,8 @@ end
 
 -- 指定农历年、月（非闰月）的天数
 function M.monthDays(y, m)
-  -- 位 0x10000 >> m：若该位为1则是大月
-  if (lunarInfo[y - 1899] & (0x10000 >> m)) == 0 then
+  -- 位 0x10000 >> m：若该位为1则是大月（第 17-m 位）
+  if math.floor(lunarInfo[y - 1899] / 2 ^ (16 - m)) % 2 == 0 then
     return 29
   end
   return 30
@@ -97,13 +97,14 @@ end
 
 -- 指定农历年总天数（不含闰月）
 function M.yearDays(y)
-  local i, sum = 0x8000, 348
+  local sum = 348
   local info = lunarInfo[y - 1899]
   for month = 1, 12 do
-    if (info & i) ~= 0 then
+    -- 位掩码 0x10000 >> (month-1) = 2^(16-month)，即第 17-month 位
+    local i = 2 ^ (16 - month)
+    if math.floor(info / i) % 2 == 1 then
       sum = sum + 1
     end
-    i = i >> 1
   end
   return sum
 end

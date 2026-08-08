@@ -1,0 +1,46 @@
+id = "coldneight/lunar_calendar"
+name = "Lunar Calendar"
+version = "1.0.0"
+plugin_api = 9
+author = "coldneight"
+license = "MIT"
+icon = "calendar"
+description = "农历日历插件：状态栏显示今日农历，点击弹出完整的农历月历（含节气、节日、干支生肖）。"
+dependencies = []
+tags = ["calendar", "lunar", "chinese", "time", "utility"]
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+  [[widget.setting]]
+  key = "bar_format"
+  type = "select"
+  label_key = "settings.bar_format.label"
+  description_key = "settings.bar_format.description"
+  default = "lunar_day"
+  options = [
+    { value = "lunar_day", label_key = "settings.bar_format.options.lunar_day" },
+    { value = "solar_lunar", label_key = "settings.bar_format.options.solar_lunar" },
+    { value = "lunar_full", label_key = "settings.bar_format.options.lunar_full" },
+  ]
+
+  [[widget.setting]]
+  key = "show_glyph"
+  type = "bool"
+  label_key = "settings.show_glyph.label"
+  description_key = "settings.show_glyph.description"
+  default = true
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 360
+height = 420
+placement = "attached"
+position = "auto"
+open_near_click = true
+
+[[service]]
+id = "service"
+entry = "service.luau"

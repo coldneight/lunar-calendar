@@ -1,0 +1,20 @@
+{
+  "plugin": {
+    "name": "农历日历"
+  },
+  "settings": {
+    "bar_format": {
+      "label": "状态栏显示格式",
+      "description": "状态栏上显示的农历信息样式",
+      "options": {
+        "lunar_day": "仅农历月日（六月廿六）",
+        "solar_lunar": "阳历+农历（2026-08-08 六月廿六）",
+        "lunar_full": "干支+农历（丙午马年 六月廿六）"
+      }
+    },
+    "show_glyph": {
+      "label": "显示图标",
+      "description": "在农历文字前显示日历图标"
+    }
+  }
+}

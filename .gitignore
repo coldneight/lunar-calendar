@@ -1,0 +1,6 @@
+# 开发期脚本与本地文件，不随仓库发布
+_test_engine.lua
+
+# 系统 / 编辑器
+.DS_Store
+*.swp

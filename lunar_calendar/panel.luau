@@ -1,3 +1,6 @@
+-- i18n 共享翻译模块（中英文切换）
+local i18n = require("./i18n.luau")
+
 local lunar = (function()
 -- lunar.luau — 农历转换核心算法（查表法，1900-2100）
 -- 基于公开的农历天文数据表，算法与 6tail / lunar-javascript 一致。
@@ -832,14 +835,14 @@ local M = {}
 -- 返回详情内容数组（panel 负责外层容器 + 导航行）
 function M.view(d)
   local header = ui.row({ gap = 4, align = "center", justify = "space_between" }, {
-    chip(d.solar .. "  " .. d.weekCn),
-    chip(d.labelType),
+    chip(d.solar .. "  " .. i18n.weekday(d.weekCn)),
+    chip(i18n.tianShen(d.tianShen) .. " (" .. i18n.way(d.tianShenType) .. "/" .. i18n.luck(d.tianShenLuck) .. ")"),
   })
 
   -- 大区: 农历日大字 + 农历月
   local bigBlock = ui.row({ gap = 14, align = "center" }, {
     ui.label({
-      text = d.lunarStr or "",
+      text = i18n.lunarDay(d.lunarStr or ""),
       fontSize = 46,
       fontWeight = "bold",
       color = "on_surface",
@@ -848,23 +851,23 @@ function M.view(d)
     }),
     ui.column({ gap = 4, align = "end" }, {
       ui.label({
-        text = d.monthStr .. (d.isLeap and "（闰）" or ""),
+        text = i18n.lunarMonth(d.monthStr, d.isLeap),
         fontSize = 20,
         fontWeight = "bold",
         color = "primary",
         maxLines = 1,
       }),
-      ui.label({ text = d.dayNian, fontSize = 12, color = "on_surface_variant", maxLines = 1 }),
+      ui.label({ text = i18n.dayNian(d.dayNian), fontSize = 12, color = "on_surface_variant", maxLines = 1 }),
     }),
   })
 
   -- 节气 / 月相 条
   local bannerCells = {}
   if d.jieQi and d.jieQi ~= "" then
-    table.insert(bannerCells, chip("节气 · " .. d.jieQi, "on_surface", JIEQI_BG[d.jieQi] or "error/0.2"))
+    table.insert(bannerCells, chip(i18n.struct("节气") .. " · " .. i18n.jieQi(d.jieQi), "on_surface", JIEQI_BG[d.jieQi] or "error/0.2"))
   end
   if d.yueXiang and d.yueXiang ~= "" then
-    table.insert(bannerCells, chip("月相 · " .. d.yueXiang))
+    table.insert(bannerCells, chip(i18n.struct("月相") .. " · " .. i18n.yueXiang(d.yueXiang)))
   end
   local banner
   if #bannerCells > 0 then
@@ -876,14 +879,14 @@ function M.view(d)
   -- 信息网格：建除 / 值神 / 冲煞 / 干支
   local infoRows = ui.column({ gap = 4 }, {
     ui.row({ gap = 6, align = "center", justify = "space_between" }, {
-      chip("建除 · " .. d.jianChu),
-      chip("值神 · " .. d.tianShen),
-      chip("冲" .. d.chong .. " 煞" .. d.sha),
+      chip(i18n.struct("建除") .. " · " .. i18n.jianChu(d.jianChu)),
+      chip(i18n.struct("值神") .. " · " .. i18n.tianShen(d.tianShen)),
+      chip(i18n.struct("冲") .. i18n.animal(d.chong) .. "  " .. i18n.struct("煞") .. i18n.dir(d.sha)),
     }),
     ui.row({ gap = 6, align = "center", justify = "space_between" }, {
-      chip("日 · " .. d.dayGanZhi),
-      chip("月 · " .. d.monthGanZhi),
-      chip("年 · " .. d.yearGanZhi .. d.yearAnimal),
+      chip(i18n.struct("日") .. " · " .. i18n.romanizeGanzhi(d.dayGanZhi)),
+      chip(i18n.struct("月") .. " · " .. i18n.romanizeGanzhi(d.monthGanZhi)),
+      chip(i18n.struct("年") .. " · " .. i18n.romanizeGanzhi(d.yearGanZhi) .. i18n.animal(d.yearAnimal)),
     }),
   })
 
@@ -899,18 +902,20 @@ function M.view(d)
       table.insert(line, v)
       -- 每 4 个一组换行
       if #line == 4 or i == #items then
-        table.insert(ret, ui.label({ text = table.concat(line, "、"), fontSize = 11, color = color, maxLines = 0 }))
+        table.insert(ret, ui.label({ text = table.concat(line, i18n.sepList()), fontSize = 11, color = color, maxLines = 0 }))
         line = {}
       end
     end
     return ui.column({ gap = 4 }, ret)
   end
 
+  local yiItems = i18n.activityList(d.yi)
+  local jiItems = i18n.activityList(d.ji)
   local yiBlock = ui.column({ gap = 8, padding = 10, radius = 10, fill = "primary/0.08", flexGrow = 1 }, {
-    wrapLines("宜", d.yi, "primary"),
+    wrapLines(i18n.struct("宜"), yiItems, "primary"),
   })
   local jiBlock = ui.column({ gap = 8, padding = 10, radius = 10, fill = "error/0.08", flexGrow = 1 }, {
-    wrapLines("忌", d.ji, "error"),
+    wrapLines(i18n.struct("忌"), jiItems, "error"),
   })
 
   local yiJi = ui.row({ gap = 10, align = "center" }, { yiBlock, jiBlock })
@@ -1025,7 +1030,7 @@ local function dayCell(y, m, d, isCurrentMonth, l)
     mainColor = "secondary"
   end
 
-  local subText = hname or sub
+  local subText = i18n.holiday(hname) or i18n.lunarSub(sub)
   local subColor = "on_surface_variant"
   if hname then
     subColor = "error"
@@ -1044,13 +1049,13 @@ end
 
 local function renderMonth()
   local y, m = view.y, view.m
-  local titleText = string.format("%d年%d月", y, m)
+  local titleText = i18n.monthTitle(y, m)
   local firstDow, daysInMonth = monthGridInfo(y, m)
 
   local rows = {}
   -- 周表头：flexGrow 均分宽度，与下方日期行同 gap，保证一~日与各列对齐
   -- 表头与日期格同结构：每列用 flexGrow=1 的 column + align=center 包裹，保证文字在自己列内水平居中
-  local hd = { "一", "二", "三", "四", "五", "六", "日" }
+  local hd = i18n.weekHeader()
   local hc = { "on_surface_variant", "on_surface_variant", "on_surface_variant", "on_surface_variant", "on_surface_variant", "secondary", "secondary" }
   local weekHeader = {}
   for i = 1, 7 do

@@ -247,6 +247,7 @@ return M
 end)()
 
 --!nonstrict
+local i18n = require("./i18n.luau")
 -- bar.luau — 状态栏农历 widget
 -- 显示今天的农历日期（格式可配置），点击打开月历面板。
 
@@ -305,13 +306,19 @@ local function render()
   end
 
   local fmt = barFormat()
+  -- 中英文自适应（读取 ui_lang 设置）
+  local dayTxt = i18n.lunarDay(l.dayStr)
+  local monthTxt = i18n.lunarMonth(l.monthStr, l.isLeap and true or false)
+  local ganZhiTxt = i18n.romanizeGanzhi(l.yearGanZhi)
+  local shengXiaoTxt = i18n.animal(l.shengXiao)
+
   local text = ""
   if fmt == "lunar_day" then
-    text = l.monthStr .. l.dayStr
+    text = monthTxt .. " " .. dayTxt
   elseif fmt == "solar_lunar" then
-    text = string.format("%d-%02d-%02d %s%s", today.y, today.m, today.d, l.monthStr, l.dayStr)
+    text = string.format("%04d-%02d-%02d %s%s", today.y, today.m, today.d, monthTxt, dayTxt)
   elseif fmt == "lunar_full" then
-    text = today.y .. " " .. l.yearGanZhi .. l.shengXiao .. "年 " .. l.monthStr .. l.dayStr
+    text = today.y .. " " .. ganZhiTxt .. " " .. shengXiaoTxt .. i18n.struct("年") .. " " .. monthTxt .. " " .. dayTxt
   end
 
   if text ~= "" and not barWidget.isVertical() then
@@ -320,11 +327,11 @@ local function render()
 
   -- tooltip
   local tooltipLines = {
-    string.format("%d年%d月%d日", today.y, today.m, today.d),
-    ("%s%s年 %s%s"):format(l.yearGanZhi, l.shengXiao, l.monthStr, l.dayStr),
+    string.format("%04d-%02d-%02d", today.y, today.m, today.d),
+    ganZhiTxt .. " " .. shengXiaoTxt .. i18n.struct("年") .. " " .. monthTxt .. " " .. dayTxt,
   }
   if todayHoliday then
-    table.insert(tooltipLines, "节日: " .. todayHoliday)
+    table.insert(tooltipLines, i18n.struct("节日") .. ": " .. i18n.holiday(todayHoliday))
   end
   barWidget.setTooltip(table.concat(tooltipLines, "\n"))
 

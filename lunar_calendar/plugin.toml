@@ -1,13 +1,26 @@
 id = "coldneight/lunar_calendar"
-name = "Lunar Calendar"
+name = "农历日历"
 version = "1.0.0"
-plugin_api = 20
+plugin_api = 22
 author = "coldneight"
 license = "MIT"
 icon = "calendar"
 description = "农历日历插件：状态栏显示今日农历，点击弹出完整的农历月历（含节气、节日、干支生肖）。"
 dependencies = []
 tags = ["calendar", "lunar", "chinese", "time", "utility"]
+
+# 面板/状态栏界面语言：auto=跟随系统，zh=中文，en=English
+[[setting]]
+key = "ui_lang"
+type = "select"
+label_key = "settings.ui_lang.label"
+description_key = "settings.ui_lang.description"
+default = "auto"
+options = [
+  { value = "auto", label_key = "settings.ui_lang.options.auto" },
+  { value = "zh", label_key = "settings.ui_lang.options.zh" },
+  { value = "en", label_key = "settings.ui_lang.options.en" },
+]
 
 [[widget]]
 id = "bar"

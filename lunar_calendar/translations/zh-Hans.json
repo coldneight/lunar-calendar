@@ -3,6 +3,15 @@
     "name": "农历日历"
   },
   "settings": {
+    "ui_lang": {
+      "label": "界面语言",
+      "description": "农历面板与状态栏的显示语言",
+      "options": {
+        "auto": "跟随系统",
+        "zh": "中文",
+        "en": "English"
+      }
+    },
     "bar_format": {
       "label": "状态栏显示格式",
       "description": "状态栏上显示的农历信息样式",

@@ -3,6 +3,15 @@
     "name": "Lunar Calendar"
   },
   "settings": {
+    "ui_lang": {
+      "label": "UI language",
+      "description": "Display language of the lunar panel and bar widget",
+      "options": {
+        "auto": "Follow system",
+        "zh": "中文",
+        "en": "English"
+      }
+    },
     "bar_format": {
       "label": "Bar format",
       "description": "How the lunar date is shown in the bar",

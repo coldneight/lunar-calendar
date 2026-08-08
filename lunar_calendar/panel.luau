@@ -1074,7 +1074,7 @@ local function renderMonth()
     if cellD > 0 and isCurrent then
       table.insert(cells, dayCell(cellY, cellM, cellD, true, l0))
     else
-      table.insert(cells, ui.box({ flexGrow = 1 }))
+      table.insert(cells, ui.column({ flexGrow = 1 }))
     end
     cellY, cellM, cellD = lunar.fromJulianDay(lunar.toJulianDay(cellY, cellM, cellD) + 1)
     l0 = lunar.fromLunarAdvance(l0)

@@ -68,13 +68,26 @@ local ZHI_EN = {
   ["午"]="Wu", ["未"]="Wei", ["申"]="Shen", ["酉"]="You", ["戌"]="Xu", ["亥"]="Hai",
 }
 
--- 将一个干支串（如"甲子"）翻译
+-- 按 UTF-8 判定单个字符的字节数（兼容中英文）。注意：#s 是字节数不是字符数，
+-- 直接 string.sub(s,i,i) 会切碎多字节中文，必须用本函数逐字符推进。
+local function utf8CharLen(b)
+  if b == nil then return 1 end
+  if b < 0x80 then return 1 end
+  if b < 0xE0 then return 2 end
+  if b < 0xF0 then return 3 end
+  return 4
+end
+
+-- 将一个干支串（如"甲子"）翻译。按"字符"而非"字节"遍历，避免多字节中文被切碎成乱码（??）。
 function M.romanizeGanzhi(s)
   if not isEn() then return s end
   local parts = {}
-  for i = 1, #s do
-    local ch = string.sub(s, i, i)
-    parts[i] = GAN_EN[ch] or ZHI_EN[ch] or ch
+  local i, n = 1, #s
+  while i <= n do
+    local clen = utf8CharLen(s:byte(i))
+    local ch = string.sub(s, i, i + clen - 1)
+    parts[#parts + 1] = GAN_EN[ch] or ZHI_EN[ch] or ch
+    i = i + clen
   end
   return table.concat(parts)
 end
@@ -256,23 +269,34 @@ local MONTH_NUM = { ["正"]="1", ["二"]="2", ["三"]="3", ["四"]="4", ["五"]=
                     ["冬"]="11", ["腊"]="12" }
 
 -- 农历日（英文数字）：初八->8 / 十一->11 / 廿六->26 / 三十->30 / 二十->20
+-- 按"字符"而非"字节"处理：中文 UTF-8 一字 3 字节，原 #dayStr/sub() 会切碎导致英文残留中文。
 function M.lunarDay(dayStr)
   if not isEn() then return dayStr end
   if not dayStr or #dayStr == 0 then return dayStr end
-  local head = string.sub(dayStr, 1, 1)
+  -- 逐字节推进取第一个字符
+  local headLen = utf8CharLen(dayStr:byte(1))
+  local head = string.sub(dayStr, 1, headLen)
+  local restHead = string.sub(dayStr, headLen + 1) -- 其余字节段（可能为空或剩余一个汉字）
+  -- 剩余部分第一个字符（用于取第二位的数字）
+  local n2 = ""
+  if #restHead > 0 then
+    local rl = utf8CharLen(restHead:byte(1))
+    n2 = CH_NUM[string.sub(restHead, 1, rl)] or ""
+  end
   if head == "初" then
-    return CH_NUM[string.sub(dayStr, 2, 2)] or dayStr
+    return n2 == "" and dayStr or n2
   elseif head == "十" then
-    if #dayStr == 2 then return "10" end
-    return "1" .. (CH_NUM[string.sub(dayStr, 2, 2)] or "")
+    -- 十日(整个只有"十") = 10；十一/十二等 = 1X
+    if #restHead == 0 then return "10" end
+    return "1" .. n2
   elseif head == "廿" then
-    return "2" .. (CH_NUM[string.sub(dayStr, 2, 2)] or "")
-  elseif head == "二" and #dayStr == 2 then
+    return "2" .. n2
+  elseif head == "二" then
     return "20"
-  elseif head == "三" and #dayStr == 2 then
+  elseif head == "三" then
     return "30"
   end
-  return CH_NUM[dayStr] or dayStr
+  return CH_NUM[head] or dayStr
 end
 
 -- 农历月（英文：6th lunar month；闰月加 leap）
@@ -1520,7 +1544,7 @@ local function renderDetail()
   local d = calendar.dayInfo(view.y, view.m, view.d)
   local titleText = string.format("%d年%d月%d日  %s", view.y, view.m, view.d, d.weekCn)
 
-  panel.render(ui.column({ gap = 8, padding = 10 }, {
+  panel.render(ui.column({ gap = 8, padding = 10, flexGrow = 1 }, {
     -- 顶栏：返回 + 标题 + 前后天
     ui.row({ align = "center", gap = 6 }, {
       ui.button({ glyph = "arrow-left", variant = "ghost", tooltip = "返回月历", onClick = backToMonth }),
@@ -1530,8 +1554,9 @@ local function renderDetail()
       ui.button({ glyph = "chevron-left", variant = "ghost", onClick = function() stepDay(-1) end }),
       ui.button({ glyph = "chevron-right", variant = "ghost", onClick = function() stepDay(1) end }),
     }),
-    -- 详情主体
-    ui.column({ gap = 8 }, detail.view(d)),
+    -- 详情主体：包一层 ui.scroll 垂直滚动，内容（尤其英文折行后）超出面板高度时可滚动查看
+    -- scroll flexGrow=1 填满顶栏之外的剩余面板高度，内容超高即出现滚动条（不撑破面板）
+    ui.scroll({ gap = 8, flexGrow = 1 }, detail.view(d)),
   }))
 end
 

@@ -14,5 +14,5 @@ license = "MIT"
 icon = "calendar"
 description = "农历日历插件：状态栏显示今日农历，点击弹出完整的农历月历（含节气、节日、干支生肖）与单日黄历详情。"
 deprecated = false
-plugin_api = 22
+plugin_api = 20
 tags = ["calendar", "lunar", "chinese", "time", "utility"]

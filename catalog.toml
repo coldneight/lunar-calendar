@@ -6,8 +6,8 @@
 [[plugin]]
 id = "coldneight/lunar_calendar"
 name = "农历日历"
-version = "1.0.3"
-updated_at = 1786217680
+version = "1.0.4"
+updated_at = 1786219309
 added_at = 1786205984
 author = "coldneight"
 license = "MIT"

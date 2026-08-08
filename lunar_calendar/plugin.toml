@@ -1,6 +1,6 @@
 id = "coldneight/lunar_calendar"
 name = "农历日历"
-version = "1.0.6"
+version = "1.0.7"
 plugin_api = 20
 author = "coldneight"
 license = "MIT"

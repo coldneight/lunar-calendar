@@ -303,7 +303,8 @@ function M.lunarMonth(monthStr, isLeap)
   if not isEn() then return monthStr .. (isLeap and "（闰）" or "") end
   if not monthStr then return monthStr end
   local zh = string.gsub(monthStr, "闰", "")
-  local num = MONTH_NUM[zh]
+  local cl = utf8CharLen(zh:byte(1))
+  local num = MONTH_NUM[string.sub(zh, 1, cl)]
   local pre = (isLeap and "Leap " or "")
   if num then
     return pre .. num .. "th lunar month"
@@ -349,8 +350,8 @@ function M.dayNian(s)
   -- 形如 "甲子年 六月廿六"
   local yearPart, rest = string.match(s, "^(.-年)%s*(.*)$")
   if not yearPart then return s end
-  local ganzhi = string.sub(yearPart, 1, -2) -- 去掉"年"
-  local zhMonth, zhDay = string.match(rest, "^(.-)(%S+)$")
+  local ganzhi = string.gsub(yearPart, "年$", "") -- 显式去掉末尾"年"字（UTF-8三字节，不能按字节 -2 会残留残字节）
+  local zhMonth, zhDay = string.match(rest, "^(.*月)(.*)$")
   if not zhMonth then return s end
   local romanized = M.romanizeGanzhi(ganzhi) .. "-year"
   local mth = M.lunarMonth(zhMonth, false)

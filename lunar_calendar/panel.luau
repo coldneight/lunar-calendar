@@ -1049,15 +1049,15 @@ local function renderMonth()
 
   local rows = {}
   -- 周表头：flexGrow 均分宽度，与下方日期行同 gap，保证一~日与各列对齐
-  local weekHeader = {
-    ui.label({ text = "一", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "二", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "三", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "四", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "五", color = "on_surface_variant", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "六", color = "secondary", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-    ui.label({ text = "日", color = "secondary", fontSize = 11, flexGrow = 1, textAlign = "center" }),
-  }
+  -- 表头与日期格同结构：每列用 flexGrow=1 的 column + align=center 包裹，保证文字在自己列内水平居中
+  local hd = { "一", "二", "三", "四", "五", "六", "日" }
+  local hc = { "on_surface_variant", "on_surface_variant", "on_surface_variant", "on_surface_variant", "on_surface_variant", "secondary", "secondary" }
+  local weekHeader = {}
+  for i = 1, 7 do
+    table.insert(weekHeader, ui.column({ flexGrow = 1, align = "center" }, {
+      ui.label({ text = hd[i], color = hc[i], fontSize = 11 }),
+    }))
+  end
   table.insert(rows, ui.row({ gap = 6 }, weekHeader))
 
   local cellY, cellM, cellD = y, m, 1

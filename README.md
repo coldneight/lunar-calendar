@@ -2,8 +2,11 @@
 
 为 [noctalia](https://noctalia.dev) 桌面环境提供农历日历：状态栏显示今日农历，点击弹出完整月历，点任意日期可查看**单日黄历详情**。
 
+> 🌀 **Vibe Coding**：本项目由 [DeepSeek](https://deepseek.com) 协同 vibe-coding 完成——从农历算法移植、noctalia 插件适配，到调试与发布，全程 AI 结对协作。欢迎借鉴或一起完善。
+
 ![noctalia](https://img.shields.io/badge/noctalia-plugin-3b82f6)
 ![license](https://img.shields.io/badge/license-MIT-green)
+![vibe-coding](https://img.shields.io/badge/vibe--coding-by%20deepseek-8b5cf6)
 
 ## ✨ 功能
 
@@ -55,18 +58,24 @@ noctalia msg plugins enable coldneight/lunar_calendar
 
 ## 📁 文件结构
 
+仓库遵循 noctalia 的「源」规范：根目录 `catalog.toml` 为插件索引，插件源码位于同名子目录。
+
 ```
-lunar_calendar/
-├── plugin.toml      # 插件清单（ID、widget、panel、service 注册）
-├── bar.luau         # 状态栏 widget
-├── panel.luau       # 月历 + 单日详情双视图面板
-├── detail.luau      # 单日黄历详情渲染
-├── calendar.luau    # 黄历引擎（农历/干支/值神/冲煞/宜忌）
-├── lunar.luau       # 农历日期核心（公农历转换）
-├── jieqi_data.luau  # 24 节气数据表
-├── service.luau     # 后台服务（推送今日实时农历）
-└── translations/    # 翻译
+lunar-calendar/          # 源仓库根
+├── catalog.toml         # 插件索引（[[plugin]]，noctalia 据此发现插件）
+└── lunar_calendar/      # 插件子目录（对应 id coldneight/lunar_calendar）
+    ├── plugin.toml      # 插件清单（ID、widget、panel、service 注册）
+    ├── bar.luau         # 状态栏 widget（已内联依赖，require 清零）
+    ├── panel.luau       # 月历 + 单日详情双视图面板（已内联依赖）
+    ├── service.luau     # 后台服务（已内联依赖）
+    ├── calendar.luau    # 黄历引擎源码（农历/干支/值神/冲煞/宜忌）
+    ├── lunar.luau       # 农历日期核心源码（公农历转换）
+    ├── jieqi_data.luau  # 24 节气数据表源码
+    ├── detail.luau      # 单日黄历详情渲染源码
+    └── translations/    # 翻译
 ```
+
+> **关于 `require`**：当前 noctalia（`plugin_api` 支持范围 3–20）不支持跨文件 `require()` 模块加载，因此 `bar/panel/service` 三个入口文件已把核心逻辑**物理内联合并**（`require` 清零）。`calendar/lunar/jieqi_data/detail.luau` 为各算法模块的独立源码，便于阅读与维护；如日后 noctalia 提升 `plugin_api` 支持 `require`，可改回标准模块引用方式。
 
 ## 🔬 算法正确性
 

@@ -10,8 +10,8 @@
 
 local M = {}
 
-local lunar = require("lunar")
-local JIE  = require("jieqi_data") -- JIE[year-1900] = 12 x {月,日}：立春,惊蛰,清明,立夏,芒种,小暑,立秋,白露,寒露,立冬,大雪,小寒
+local lunar = require("./lunar.luau")
+local JIE  = require("./jieqi_data.luau") -- JIE[year-1900] = 12 x {月,日}：立春,惊蛰,清明,立夏,芒种,小暑,立秋,白露,寒露,立冬,大雪,小寒
 
 -- 节气名（与 JIE 顺序对应）
 local JIE_NAMES = { "立春","惊蛰","清明","立夏","芒种","小暑","立秋","白露","寒露","立冬","大雪","小寒" }

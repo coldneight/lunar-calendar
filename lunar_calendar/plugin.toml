@@ -1,7 +1,7 @@
 id = "coldneight/lunar_calendar"
 name = "Lunar Calendar"
 version = "1.0.0"
-plugin_api = 9
+plugin_api = 20
 author = "coldneight"
 license = "MIT"
 icon = "calendar"

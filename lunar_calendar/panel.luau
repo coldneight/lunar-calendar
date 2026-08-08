@@ -1048,6 +1048,16 @@ function M.dayInfo(y, m, d)
 
   -- 节气
   local jq = M.jieQiOf(y, m, d)
+  -- 节日（针对详情页提醒：阳历节日 + 农历节日；复用在 lunar.getHolidayL）
+  local holType, holName = lunar.getHolidayL(l) -- 农历节日: "lunar", 名
+  if not holName then
+    for _, sh in ipairs(lunar.solarHolidays) do
+      if sh[1] == m and sh[2] == d then
+        holType, holName = "solar", sh[3]
+        break
+      end
+    end
+  end
   -- 月相
   local lDay = l.day
   local yueXiang = YUE_XIANG[lDay] or YUE_XIANG[#YUE_XIANG]
@@ -1112,6 +1122,8 @@ function M.dayInfo(y, m, d)
     sha         = sha,               -- "南"
     yueXiang    = yueXiang,          -- "望"
     jieQi       = jq,                -- "立秋" or nil
+    holType     = holType,           -- "solar"/"lunar"/nil（节日类型）
+    holDay      = holName,           -- "中秋节"/"元旦"/nil（节日名，用于详情页提醒）
     yi          = yi,                -- 宜列表
     ji          = ji,                -- 忌列表
     -- 简化的"冲X煞Y" / "黄黑道吉凶" 组合串
@@ -1184,6 +1196,16 @@ function M.view(d)
     chip(d.solar .. "  " .. i18n.weekday(d.weekCn)),
     chip(i18n.tianShen(d.tianShen) .. " (" .. i18n.way(d.tianShenType) .. "/" .. i18n.luck(d.tianShenLuck) .. ")"),
   })
+
+  -- 节日提醒横幅：当天是传统节日（农历/阳历）时显示，醒目提示
+  -- 详情页空间充足，可以显示完整英文译名
+  local holidayReminder
+  if d.holDay and d.holDay ~= "" then
+    holidayReminder = ui.row({ gap = 8, align = "center", padding = 8, radius = 8, fill = "tertiary/0.16" }, {
+      ui.label({ text = "🎉", fontSize = 16, color = "tertiary", maxLines = 1 }),
+      ui.label({ text = i18n.holiday(d.holDay), fontSize = 14, fontWeight = "bold", color = "tertiary", maxLines = 1, flexGrow = 1 }),
+    })
+  end
 
   -- 大区: 农历日大字 + 农历月
   local bigBlock = ui.row({ gap = 14, align = "center" }, {
@@ -1268,6 +1290,7 @@ function M.view(d)
 
   return {
     header,
+    holidayReminder,           -- 节日提醒横幅（无节日时为 nil，不渲染）
     bigBlock,
     banner,
     infoRows,
@@ -1376,7 +1399,9 @@ local function dayCell(y, m, d, isCurrentMonth, l)
     mainColor = "secondary"
   end
 
-  local subText = i18n.holiday(hname) or i18n.lunarSub(sub)
+  -- 月历格子副文字一律用中文（节日原文 / 农历原文），不做英文翻译：
+  -- 英文译名太长挤不下格子（如 Mid-Autumn Festival），完整英文留给黄历详情页。
+  local subText = hname or sub
   local subColor = "on_surface_variant"
   if hname then
     subColor = "error"

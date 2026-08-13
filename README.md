@@ -71,15 +71,18 @@ lunar-calendar/          # 源仓库根
     ├── calendar.luau    # 黄历引擎源码（农历/干支/值神/冲煞/宜忌）
     ├── lunar.luau       # 农历日期核心源码（公农历转换）
     ├── jieqi_data.luau  # 24 节气数据表源码
+    ├── yiji_data.luau   # 黄历宜忌数据源码（自 6tail/lunar-javascript 导入）
     ├── detail.luau      # 单日黄历详情渲染源码
     └── translations/    # 翻译
 ```
 
-> **关于 `require`**：当前 noctalia（`plugin_api` 支持范围 3–20）不支持跨文件 `require()` 模块加载，因此 `bar/panel/service` 三个入口文件已把核心逻辑**物理内联合并**（`require` 清零）。`calendar/lunar/jieqi_data/detail.luau` 为各算法模块的独立源码，便于阅读与维护；如日后 noctalia 提升 `plugin_api` 支持 `require`，可改回标准模块引用方式。
+> **关于 `require` 与内联**：插件声明 `plugin_api = 20`（兼容 noctalia 3.x 至今；`require()` 需 `plugin_api >= 22`）。为在受支持范围内直接运行，`bar/panel/service` 三个入口文件把核心逻辑**物理内联合并**（`require` 清零）。`calendar/lunar/jieqi_data/yiji_data/detail/i18n.luau` 为各算法模块的独立源码（彼此已按 `require` 正确引用，`lunar.luau` 已改为纯算术、无位运算符），便于阅读与维护；若日后把 `plugin_api` 提升到 22+，可直接改回标准 `require` 模块引用方式。
 
 ## 🔬 算法正确性
 
 引擎核心已用权威 Python 库 [`lunar_python`](https://pypi.org/project/lunar_python/) 交叉验证，覆盖跨年、闰月、节气转换等 16 个边界日期，全部一致（详见 `_test_engine.lua`，开发期脚本，不随仓库发布）。
+
+**宜/忌**采用权威黄历数据：导入 [6tail/lunar-javascript](https://github.com/6tail/lunar-javascript)（`lunar_python` 同源）的 `YI_JI` / `DAY_YI_JI` 表，按「月柱 + 日柱」查表得出，已对 2020–2027 年 288 个日期（含节气、春节、闰月边界）逐一比对 `lunar_python` 的 `getDayYi()/getDayJi()`，**288/288 完全一致**。同时修正了月柱（月干支）的「五虎遁」公式（此前漏了 +2 偏移、且年干未按立春切换）。
 
 ## 🧩 项目总结
 

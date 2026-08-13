@@ -1,3 +1,4 @@
+--!nonstrict
 local lunar = (function()
 -- lunar.luau — 农历转换核心算法（查表法，1900-2100）
 -- 基于公开的农历天文数据表，算法与 6tail / lunar-javascript 一致。
@@ -246,7 +247,6 @@ return M
 
 end)()
 
---!nonstrict
 local i18n = (function()
 -- i18n.luau — 农历插件「中英文切换」共享模块
 -- 读取 plugin.toml 的 ui_lang 设置（auto/zh/en），提供术语翻译与结构文案。
@@ -429,7 +429,7 @@ function M.jieQi(zh)
 end
 
 ---------------------------------------------------------------------
--- 宜忌活动（涵盖 YI_FOR_TYPE / JI_FOR_TYPE / JIAN_CHU_YI / JIAN_CHU_JI 全部条目）
+-- 宜忌活动（权威黄历宜忌词汇表，自 6tail/lunar-javascript 导入）
 ---------------------------------------------------------------------
 local ACTIVITY_EN = {
   -- 婚嫁喜庆
@@ -451,6 +451,92 @@ local ACTIVITY_EN = {
   -- 其他
   ["理发"]="Haircut", ["沐浴"]="Bathing", ["扫舍"]="House Cleaning", ["栽种"]="Planting",
   ["放水"]="Draining Water", ["捕捉"]="Hunting", ["开仓"]="Opening the Granary",
+  ["乘船"]="Boating",
+  ["习艺"]="Learning a Craft",
+  ["伐木"]="Felling Timber",
+  ["会亲友"]="Meeting Friends & Family",
+  ["作梁"]="Making Beams",
+  ["作灶"]="Building a Stove",
+  ["修坟"]="Repairing a Grave",
+  ["修门"]="Repairing Doors",
+  ["修饰垣墙"]="Repairing Walls",
+  ["入学"]="Starting School",
+  ["冠笄"]="Coming of Age",
+  ["出火"]="Moving the Stove Fire",
+  ["出货财"]="Shipping Goods",
+  ["分居"]="Separating Households",
+  ["割蜜"]="Harvesting Honey",
+  ["取渔"]="Fishing",
+  ["合寿木"]="Preparing the Coffin",
+  ["合帐"]="Hanging Bed Curtains",
+  ["合脊"]="Joining the Ridge",
+  ["启钻"]="Opening the Grave",
+  ["塑绘"]="Sculpting Idols",
+  ["塞穴"]="Sealing Caves",
+  ["安机械"]="Installing Machinery",
+  ["安碓磑"]="Installing a Mill",
+  ["安门"]="Installing Doors",
+  ["安香"]="Installing Incense",
+  ["定磉"]="Setting the Foundation",
+  ["平治道涂"]="Leveling Roads",
+  ["开厕"]="Building a Toilet",
+  ["开柱眼"]="Opening Pillar Holes",
+  ["开池"]="Digging a Pond",
+  ["开渠"]="Digging a Canal",
+  ["开生坟"]="Opening a New Grave",
+  ["归宁"]="Visiting Parents",
+  ["归岫"]="Returning Home",
+  ["成服"]="Wearing Mourning",
+  ["拆卸"]="Dismantling",
+  ["挂匾"]="Hanging a Plaque",
+  ["掘井"]="Digging a Well",
+  ["探病"]="Visiting the Sick",
+  ["教牛马"]="Training Livestock",
+  ["整手足甲"]="Trimming Nails",
+  ["断蚁"]="Clearing Ant Nests",
+  ["无"]="None",
+  ["普渡"]="Pudu Ritual",
+  ["架马"]="Erecting Scaffolding",
+  ["求医"]="Seeking Medical Care",
+  ["治病"]="Treating Illness",
+  ["牧养"]="Raising Livestock",
+  ["畋猎"]="Hunting",
+  ["盖屋"]="Roofing the House",
+  ["破土"]="Groundbreaking (Burial)",
+  ["移徙"]="Relocating",
+  ["移柩"]="Moving the Coffin",
+  ["立券"]="Signing a Contract",
+  ["立碑"]="Erecting a Stele",
+  ["竖柱"]="Erecting Pillars",
+  ["纳婿"]="Taking a Son-in-law",
+  ["纳畜"]="Raising Livestock",
+  ["经络"]="Warping the Loom",
+  ["结网"]="Making Nets",
+  ["置产"]="Buying Property",
+  ["补垣"]="Patching Walls",
+  ["裁衣"]="Cutting Clothes",
+  ["解除"]="Lifting a Curse",
+  ["订盟"]="Betrothal",
+  ["词讼"]="Litigation",
+  ["诸事不宜"]="Nothing Auspicious",
+  ["谢土"]="Thanking the Earth God",
+  ["赴任"]="Assuming a Post",
+  ["起基"]="Laying the Foundation",
+  ["进人口"]="Adding Family",
+  ["造仓"]="Building a Granary",
+  ["造庙"]="Building a Temple",
+  ["造桥"]="Building a Bridge",
+  ["造畜稠"]="Building a Livestock Pen",
+  ["造船"]="Building a Boat",
+  ["造车器"]="Building Vehicles",
+  ["酬神"]="Thanking the Gods",
+  ["针灸"]="Acupuncture",
+  ["问名"]="Asking the Name",
+  ["除服"]="Removing Mourning",
+  ["雇佣"]="Hiring",
+  ["雕刻"]="Carving",
+  ["馀事勿取"]="Avoid Other Matters",
+  ["齐醮"]="Taoist Ritual",
 }
 
 function M.activity(zh)

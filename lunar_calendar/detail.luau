@@ -2,6 +2,9 @@
 -- detail.luau — 单日台历详情视图（纯展示）
 -- 输入 calendar.dayInfo 的 info 表，输出页面上层的 ui 内容数组。
 -- 布局：大字"初八" + 公历/农历/干支标题 + 节气/月相色块 + 冲煞/值神/建除 + 宜忌。
+-- 依赖：ui（noctalia 提供）、i18n（require 自 i18n.luau）
+
+local i18n = require("./i18n.luau")
 
 -- 节气给一个柔和背景色，让当日节气一眼可见
 local JIEQI_BG = {
@@ -21,6 +24,7 @@ local function chip(text, color, fill)
 end
 
 -- 自适应胶囊：flexGrow 均分列宽，label maxLines=0 允许英文长文本在列内换行
+-- （解决英文干支/翻译等超底板；中文短串不触发换行仍单行居中）
 local function chipCol(text, color, fill)
   return ui.column({ padding = 4, radius = 6, fill = fill or "surface_variant/0.2", flexGrow = 1 }, {
     ui.label({ text = text, fontSize = 11, color = color or "on_surface", maxLines = 0, textAlign = "center" }),
@@ -32,14 +36,24 @@ local M = {}
 -- 返回详情内容数组（panel 负责外层容器 + 导航行）
 function M.view(d)
   local header = ui.row({ gap = 4, align = "center", justify = "space_between" }, {
-    chip(d.solar .. "  " .. d.weekCn),
-    chip(d.labelType),
+    chip(d.solar .. "  " .. i18n.weekday(d.weekCn)),
+    chip(i18n.tianShen(d.tianShen) .. " (" .. i18n.way(d.tianShenType) .. "/" .. i18n.luck(d.tianShenLuck) .. ")"),
   })
+
+  -- 节日提醒横幅：当天是传统节日（农历/阳历）时显示，醒目提示
+  -- 详情页空间充足，可以显示完整英文译名
+  local holidayReminder
+  if d.holDay and d.holDay ~= "" then
+    holidayReminder = ui.row({ gap = 8, align = "center", padding = 8, radius = 8, fill = "tertiary/0.16" }, {
+      ui.label({ text = "🎉", fontSize = 16, color = "tertiary", maxLines = 1 }),
+      ui.label({ text = i18n.holiday(d.holDay), fontSize = 14, fontWeight = "bold", color = "tertiary", maxLines = 1, flexGrow = 1 }),
+    })
+  end
 
   -- 大区: 农历日大字 + 农历月
   local bigBlock = ui.row({ gap = 14, align = "center" }, {
     ui.label({
-      text = d.lunarStr or "",
+      text = i18n.lunarDay(d.lunarStr or ""),
       fontSize = 46,
       fontWeight = "bold",
       color = "on_surface",
@@ -48,23 +62,23 @@ function M.view(d)
     }),
     ui.column({ gap = 4, align = "end" }, {
       ui.label({
-        text = d.monthStr .. (d.isLeap and "（闰）" or ""),
+        text = i18n.lunarMonth(d.monthStr, d.isLeap),
         fontSize = 20,
         fontWeight = "bold",
         color = "primary",
         maxLines = 1,
       }),
-      ui.label({ text = d.dayNian, fontSize = 12, color = "on_surface_variant", maxLines = 1 }),
+      ui.label({ text = i18n.dayNian(d.dayNian), fontSize = 12, color = "on_surface_variant", maxLines = 1 }),
     }),
   })
 
   -- 节气 / 月相 条
   local bannerCells = {}
   if d.jieQi and d.jieQi ~= "" then
-    table.insert(bannerCells, chip("节气 · " .. d.jieQi, "on_surface", JIEQI_BG[d.jieQi] or "error/0.2"))
+    table.insert(bannerCells, chip(i18n.struct("节气") .. " · " .. i18n.jieQi(d.jieQi), "on_surface", JIEQI_BG[d.jieQi] or "error/0.2"))
   end
   if d.yueXiang and d.yueXiang ~= "" then
-    table.insert(bannerCells, chip("月相 · " .. d.yueXiang))
+    table.insert(bannerCells, chip(i18n.struct("月相") .. " · " .. i18n.yueXiang(d.yueXiang)))
   end
   local banner
   if #bannerCells > 0 then
@@ -76,14 +90,14 @@ function M.view(d)
   -- 信息网格：建除 / 值神 / 冲煞 / 干支（用 chipCol 均分列宽，英文长文本自动换行）
   local infoRows = ui.column({ gap = 4 }, {
     ui.row({ gap = 4, align = "center" }, {
-      chipCol("建除 · " .. d.jianChu),
-      chipCol("值神 · " .. d.tianShen),
-      chipCol("冲" .. d.chong .. " 煞" .. d.sha),
+      chipCol(i18n.struct("建除") .. " · " .. i18n.jianChu(d.jianChu)),
+      chipCol(i18n.struct("值神") .. " · " .. i18n.tianShen(d.tianShen)),
+      chipCol(i18n.struct("冲") .. i18n.animal(d.chong) .. "  " .. i18n.struct("煞") .. i18n.dir(d.sha)),
     }),
     ui.row({ gap = 4, align = "center" }, {
-      chipCol("日 · " .. d.dayGanZhi),
-      chipCol("月 · " .. d.monthGanZhi),
-      chipCol("年 · " .. d.yearGanZhi .. d.yearAnimal),
+      chipCol(i18n.struct("日") .. " · " .. i18n.romanizeGanzhi(d.dayGanZhi)),
+      chipCol(i18n.struct("月") .. " · " .. i18n.romanizeGanzhi(d.monthGanZhi)),
+      chipCol(i18n.struct("年") .. " · " .. i18n.romanizeGanzhi(d.yearGanZhi) .. i18n.animal(d.yearAnimal)),
     }),
   })
 
@@ -99,24 +113,27 @@ function M.view(d)
       table.insert(line, v)
       -- 每 4 个一组换行
       if #line == 4 or i == #items then
-        table.insert(ret, ui.label({ text = table.concat(line, "、"), fontSize = 11, color = color, maxLines = 0 }))
+        table.insert(ret, ui.label({ text = table.concat(line, i18n.sepList()), fontSize = 11, color = color, maxLines = 0 }))
         line = {}
       end
     end
     return ui.column({ gap = 4 }, ret)
   end
 
+  local yiItems = i18n.activityList(d.yi)
+  local jiItems = i18n.activityList(d.ji)
   local yiBlock = ui.column({ gap = 8, padding = 10, radius = 10, fill = "primary/0.08", flexGrow = 1 }, {
-    wrapLines("宜", d.yi, "primary"),
+    wrapLines(i18n.struct("宜"), yiItems, "primary"),
   })
   local jiBlock = ui.column({ gap = 8, padding = 10, radius = 10, fill = "error/0.08", flexGrow = 1 }, {
-    wrapLines("忌", d.ji, "error"),
+    wrapLines(i18n.struct("忌"), jiItems, "error"),
   })
 
   local yiJi = ui.row({ gap = 10, align = "center" }, { yiBlock, jiBlock })
 
   return {
     header,
+    holidayReminder,           -- 节日提醒横幅（无节日时为 nil，不渲染）
     bigBlock,
     banner,
     infoRows,

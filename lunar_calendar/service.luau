@@ -1,3 +1,4 @@
+--!nonstrict
 local lunar = (function()
 -- lunar.luau — 农历转换核心算法（查表法，1900-2100）
 -- 基于公开的农历天文数据表，算法与 6tail / lunar-javascript 一致。
@@ -246,7 +247,6 @@ return M
 
 end)()
 
---!nonstrict
 -- service.luau — 后台服务：每分钟推送今天的农历信息到共享状态。
 
 function update()

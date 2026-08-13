@@ -1,7 +1,7 @@
 --!nonstrict
 -- calendar.luau — 黄历引擎（纯离线算法）
 -- 农历带范围 1900-2100（lunar 模块），节气表 1901-2100（jieqi_data）。
--- 提供单日完整"台历"信息：干支、生肖、节气、月相、冲煞、值神、黄黑道、宜忌（简化）。
+-- 提供单日完整"台历"信息：干支、生肖、节气、月相、冲煞、值神、黄黑道、宜忌（权威黄历数据）。
 --
 -- 主要接口：
 --   M.init()             —— 必须先调用，加载节气表
@@ -12,6 +12,7 @@ local M = {}
 
 local lunar = require("./lunar.luau")
 local JIE  = require("./jieqi_data.luau") -- JIE[year-1900] = 12 x {月,日}：立春,惊蛰,清明,立夏,芒种,小暑,立秋,白露,寒露,立冬,大雪,小寒
+local yiji = require("./yiji_data.luau") -- 宜忌数据（自 6tail/lunar-javascript 导入）
 
 -- 节气名（与 JIE 顺序对应）
 local JIE_NAMES = { "立春","惊蛰","清明","立夏","芒种","小暑","立秋","白露","寒露","立冬","大雪","小寒" }
@@ -60,35 +61,80 @@ local YUE_XIANG = {
   "渐亏凸","渐亏凸","下弦","下弦","有明","有明","蛾眉残","蛾眉残","残","晦","晦",
 }
 
--- 宜/忌 简化标签：由 黄黑道+建除+节气 推导的常用宜忌（非钦天监逐条权威，符合传统框架）
--- 以"值神黄黑道吉凶"为主轴 + 建除 搭配
-local YI_FOR_TYPE = {
-  ["黄道"] = { "祭祀","祈福","出行","嫁娶","安床","会友" },
-  ["黑道"] = { "出行","动土","开业","嫁娶","安葬","开仓" },
-}
-local JI_FOR_TYPE = {
-  ["黄道"] = {},
-  ["黑道"] = { "出行","安葬","动土","嫁娶","搬迁" },
-}
--- 建除额外的宜忌倾向
-local JIAN_CHU_YI = {
-  ["建"]={"上任","出行","祈福"}, ["除"]={"扫舍","沐浴","祈福"}, ["满"]={"嫁娶","开市","交易"},
-  ["平"]={"安葬","修造"}, ["定"]={"祈福","嫁娶","安床"}, ["执"]={"祭祀","祈福","捕捉"},
-  ["破"]={"破屋","坏垣"}, ["危"]={"安葬","祈福"}, ["成"]={"开市","嫁娶","结婚"},
-  ["收"]={"纳财","入宅","收帐"}, ["开"]={"开市","交易","开业"}, ["闭"]={"安葬","修造","筑堤"},
-}
-local JIAN_CHU_JI = {
-  ["建"]={"行丧"}, ["除"]={"出行","动土"}, ["满"]={"安葬"}, ["平"]={"开业","嫁娶"},
-  ["定"]={"出行","动土"}, ["执"]={"嫁娶"}, ["破"]={"上任","出行"}, ["危"]={"出行","动土"},
-  ["成"]={"安葬"}, ["收"]={"开业","嫁娶"}, ["开"]={"安葬","动土"}, ["闭"]={"开市","嫁娶"},
-}
+-- ============ 宜忌（权威黄历数据，自 6tail/lunar-javascript 导入） ============
+local YI_JI = yiji.YI_JI
 
--- 简单 contains（数组）
-local function contains(t, v)
-  for _, x in ipairs(t) do
-    if x == v then return true end
+-- 六十甲子 -> 0..59 索引（转 hex 后用于查表）
+local JIA_ZI_IDX = {}
+for i, gz in ipairs(yiji.JIA_ZI) do
+  JIA_ZI_IDX[gz] = i - 1
+end
+
+-- 预解析 DAY_YI_JI 压缩串 -> dayHex -> { {months=..., yi=..., ji=...}, ... }
+local DAY_MAP = {}
+do
+  local s = yiji.DAY_YI_JI
+  local n = #s
+  local pos = 1
+  while true do
+    local eq = s:find("=", pos, true)
+    if not eq then break end
+    local day = s:sub(eq - 2, eq - 1)
+    local nextEq = s:find("=", eq + 1, true)
+    local payloadEnd = nextEq and (nextEq - 3) or n
+    local payload = s:sub(eq + 1, payloadEnd)
+    local colon = payload:find(":", 1, true)
+    local comma = payload:find(",", colon + 1, true)
+    local months = payload:sub(1, colon - 1)
+    local yiHex = payload:sub(colon + 1, comma - 1)
+    local jiHex = payload:sub(comma + 1)
+    local list = DAY_MAP[day]
+    if not list then list = {}; DAY_MAP[day] = list end
+    list[#list + 1] = { months = months, yi = yiHex, ji = jiHex }
+    if not nextEq then break end
+    pos = nextEq - 2
   end
-  return false
+end
+
+local function hex2(n)
+  return string.format("%02X", n)
+end
+
+-- 把 hex 串（每 2 字符一个索引）解码成活动名列表
+local function decodeYijiList(hex)
+  local out = {}
+  local i = 1
+  while i <= #hex do
+    out[#out + 1] = YI_JI[tonumber(hex:sub(i, i + 1), 16) + 1]
+    i = i + 2
+  end
+  return out
+end
+
+-- 宜/忌查找：给定月柱、日柱干支（如 "丙申"、"己未"），返回宜列表、忌列表
+local function dayYiJi(monthGZ, dayGZ)
+  local day = hex2(JIA_ZI_IDX[dayGZ])
+  local month = hex2(JIA_ZI_IDX[monthGZ])
+  local yi, ji
+  local list = DAY_MAP[day]
+  if list then
+    for _, e in ipairs(list) do
+      local i = 1
+      local matched = false
+      while i <= #e.months do
+        if e.months:sub(i, i + 1) == month then matched = true; break end
+        i = i + 2
+      end
+      if matched then
+        yi = decodeYijiList(e.yi)
+        ji = decodeYijiList(e.ji)
+        break
+      end
+    end
+  end
+  if not yi or #yi == 0 then yi = { "无" } end
+  if not ji or #ji == 0 then ji = { "无" } end
+  return yi, ji
 end
 
 -- 干支纪年偏移（农历年）
@@ -156,15 +202,20 @@ end
 
 -- 农历月干支（节月），用年干 + 五虎遁 求月干
 -- 月支 mzIdx 对应 寅=2 起，正月的天干由年干决定：
---   甲己之年丙作首(寅月甲)… 简化用公式：(年干idx*2 + 月支序) % 10
+--   甲己之年丙作首、乙庚之岁戊为头、丙辛必定寻庚起、丁壬壬位顺行流、戊癸甲寅好追求
+--   即 月干 idx = (年干idx*2 + 2 + 月支序) % 10；且年干按立春切换（干支年），非农历年。
 local function monthGanZhiFor(y, m, d, mzIdx)
-  -- 年干（农历年干支[0]）
-  local l = lunar.fromSolar(y, m, d)
-  local ygIdx = (l.year - 4) % 10
+  -- 干支年天干（立春切换）：已过(含)立春用公历年，否则用公历年-1
+  local effYear = y
+  local lchun = JIE[y - 1900] and JIE[y - 1900][1]
+  if lchun and not ((m > lchun[1]) or (m == lchun[1] and d >= lchun[2])) then
+    effYear = y - 1
+  end
+  local ygIdx = (effYear - 4) % 10
   -- 五虎遁：寅月起。月支在寅=2..丑=11 序列中的序号 = (mzIdx - 2 + 12) % 12 (寅=0)
   local pos = (mzIdx - 2 + 12) % 12 -- 寅=0,卯=1,...丑=11
-  -- 月干 idx = (ygIdx * 2 + pos) % 10
-  local mgIdx = (ygIdx * 2 + pos) % 10
+  -- 月干 idx = (ygIdx * 2 + 2 + pos) % 10
+  local mgIdx = (ygIdx * 2 + 2 + pos) % 10
   return Gan[mgIdx + 1] .. Zhi[mzIdx + 1]
 end
 
@@ -223,19 +274,12 @@ function M.dayInfo(y, m, d)
   -- 节气月干支：月支 + 由年干推月干（五虎遁年上起月，简化用节气月支）
   local monthGanZhiS = monthGanZhiFor(y, m, d, mzIdx)
 
-  -- 宜/忌（简化合并）
+  -- 值神黄黑道 / 吉凶
   local tsType = TS_TYPE[tsName]
   local tsLuck = TS_LUCK[tsName]
-  local yi = {}
-  local ji = {}
-  for _, v in ipairs(YI_FOR_TYPE[tsType]) do table.insert(yi, v) end
-  for _, v in ipairs(JI_FOR_TYPE[tsType]) do table.insert(ji, v) end
-  for _, v in ipairs(JIAN_CHU_YI[jianChuName] or {}) do
-    if not contains(yi, v) then table.insert(yi, v) end
-  end
-  for _, v in ipairs(JIAN_CHU_JI[jianChuName] or {}) do
-    if not contains(ji, v) then table.insert(ji, v) end
-  end
+
+  -- 宜/忌：权威黄历数据（按 月柱+日柱 查表，与 lunar_python/6tail 一致）
+  local yi, ji = dayYiJi(monthGanZhiS, dayG .. dayZ)
 
   local info = {
     -- 基础
@@ -273,21 +317,6 @@ function M.dayInfo(y, m, d)
   }
   dayCache[key] = info
   return info
-end
-
--- 农历月干支（节月），用年干 + 五虎遁 求月干
--- 月支 mzIdx 对应 寅=2 起，正月的天干由年干决定：
---   甲己之年丙作首(寅月甲)… 简化用公式：(年干idx*2 + 月支序) % 10
--- 月支序(0=寅)... 这里用节月地支的序号在"寅起始"体系中的位置
-local function monthGanZhiFor(y, m, d, mzIdx)
-  -- 年干（农历年干支[0]）
-  local l = lunar.fromSolar(y, m, d)
-  local ygIdx = (l.year - 4) % 10
-  -- 五虎遁：寅月起。月支在寅=2..丑=11 序列中的序号 = (mzIdx - 2 + 12) % 12 (寅=0)
-  local pos = (mzIdx - 2 + 12) % 12 -- 寅=0,卯=1,...丑=11
-  -- 月干 idx = (ygIdx * 2 + pos) % 10
-  local mgIdx = (ygIdx * 2 + pos) % 10
-  return Gan[mgIdx + 1] .. Zhi[mzIdx + 1]
 end
 
 -- 星期中文
